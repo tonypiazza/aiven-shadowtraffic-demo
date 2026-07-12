@@ -1,0 +1,10 @@
+[project]
+name = "shadowtraffic"
+version = "0.1.0"
+description = "Terminal notebook tooling (euporie + bash kernel) for the demo's CLI-wiring walkthrough. The demo app itself is Node/React under backend/ and frontend/."
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "bash-kernel>=0.10.0",
+    "euporie>=2.10.4",
+]

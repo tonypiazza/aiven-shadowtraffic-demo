@@ -15,3 +15,6 @@ dist/
 .tmp-throughput/
 .tmp-spike/
 .tmp-deploy/
+
+# uv virtualenv (rebuilt by uv sync)
+.venv/
