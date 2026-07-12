@@ -14,7 +14,7 @@ export default function App() {
     // saved-object id shipped in deploy/osd-dashboard-objects.ndjson); an
     // OSD_DASHBOARD_ID env var overrides it if ever needed.
     const DEFAULT_DASHBOARD_ID = 'github-events-dashboard';
-    const g = "(refreshInterval:(pause:!f,value:30000),time:(from:now-5m,to:now))";
+    const g = "(refreshInterval:(pause:!t,value:30000),time:(from:now-15m,to:now))";
     api.getConfig()
       .then((c) => c.osdDashboardId || DEFAULT_DASHBOARD_ID)
       .catch(() => DEFAULT_DASHBOARD_ID)
