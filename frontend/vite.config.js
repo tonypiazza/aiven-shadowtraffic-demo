@@ -3,8 +3,10 @@ import react from '@vitejs/plugin-react';
 
 export default defineConfig({
   plugins: [react()],
-  build: { outDir: '../backend/public', emptyOutDir: true },
+  // Assets are served under /_demo/ so OpenSearch Dashboards can own the origin root.
+  base: '/_demo/',
+  build: { outDir: '../backend/public/_demo', emptyOutDir: true },
   server: {
-    proxy: { '/api': 'http://localhost:8080' },
+    proxy: { '/control': 'http://localhost:8080' },
   },
 });

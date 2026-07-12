@@ -8,13 +8,14 @@ async function post(path, body) {
   return res.json();
 }
 
+// Control API lives under /control (OpenSearch Dashboards owns /api at the root).
 export const api = {
-  setRunning: (running) => post('/api/control/run', { running }),
-  pause: () => post('/api/control/pause', {}),
-  setRate: (type, rate) => post('/api/control/rate', { type, rate }),
-  setMultiplier: (multiplier) => post('/api/control/multiplier', { multiplier }),
-  setScenario: (scenario) => post('/api/control/scenario', { scenario }),
-  getStatus: () => fetch('/api/status').then((r) => r.json()),
-  getTtl: () => fetch('/api/ttl').then((r) => r.json()),
-  getConfig: () => fetch('/api/config').then((r) => r.json()),
+  setRunning: (running) => post('/control/run', { running }),
+  pause: () => post('/control/pause', {}),
+  setRate: (type, rate) => post('/control/rate', { type, rate }),
+  setMultiplier: (multiplier) => post('/control/multiplier', { multiplier }),
+  setScenario: (scenario) => post('/control/scenario', { scenario }),
+  getStatus: () => fetch('/control/status').then((r) => r.json()),
+  getTtl: () => fetch('/control/ttl').then((r) => r.json()),
+  getConfig: () => fetch('/control/config').then((r) => r.json()),
 };

@@ -9,8 +9,6 @@ beforeAll(async () => {
   upstream = http.createServer((req, res) => {
     if (!req.headers.authorization) { res.writeHead(401); return res.end('no auth'); }
     if (req.url === '/redir') { res.writeHead(302, { location: '/app/home' }); return res.end(); }
-    if (req.url === '/redir-prefixed') { res.writeHead(302, { location: '/osd/app/home' }); return res.end(); }
-    if (req.url === '/redir-abs') { res.writeHead(302, { location: 'https://elsewhere.example/x' }); return res.end(); }
     res.writeHead(200, {
       'x-frame-options': 'DENY',
       'content-security-policy': "frame-ancestors 'none'; script-src 'self'",
@@ -24,8 +22,9 @@ beforeAll(async () => {
 afterAll(() => upstream.close());
 
 function makeApp() {
+  // OSD proxy is the catch-all at the origin root (OSD owns the path space).
   const app = express();
-  app.use('/osd', createOsdProxy({ target: upstreamUrl, username: 'u', password: 'p' }));
+  app.use(createOsdProxy({ target: upstreamUrl, username: 'u', password: 'p' }));
   return app;
 }
 async function get(app, path) {
@@ -34,35 +33,31 @@ async function get(app, path) {
 }
 
 describe('createOsdProxy', () => {
-  it('injects Basic auth and forwards the sub-path (200)', async () => {
-    const r = await get(makeApp(), '/osd/api/status');
+  it('injects Basic auth and forwards the path as-is (200)', async () => {
+    const r = await get(makeApp(), '/api/status');
     expect(r.status).toBe(200);
     expect(r.text).toContain('ok:/api/status');
     const expected = 'Basic ' + Buffer.from('u:p').toString('base64');
     expect(r.text).toContain('auth=' + expected);
   });
 
+  it('forwards OSD root-absolute asset paths unchanged', async () => {
+    const r = await get(makeApp(), '/bootstrap.js');
+    expect(r.status).toBe(200);
+    expect(r.text).toContain('ok:/bootstrap.js');
+  });
+
   it('strips x-frame-options and frame-ancestors from CSP', async () => {
-    const r = await get(makeApp(), '/osd/api/status');
+    const r = await get(makeApp(), '/api/status');
     expect(r.headers['x-frame-options']).toBeUndefined();
     expect(r.headers['content-security-policy'] || '').not.toMatch(/frame-ancestors/i);
     // non-framing CSP directives should survive
     expect(r.headers['content-security-policy'] || '').toMatch(/script-src/i);
   });
 
-  it('rewrites root-relative redirect Location under /osd', async () => {
-    const r = await get(makeApp(), '/osd/redir');
+  it('passes redirect Location through unchanged (OSD owns root)', async () => {
+    const r = await get(makeApp(), '/redir');
     expect(r.status).toBe(302);
-    expect(r.headers.location).toBe('/osd/app/home');
-  });
-
-  it('does not double-prefix a Location already under /osd', async () => {
-    const r = await get(makeApp(), '/osd/redir-prefixed');
-    expect(r.headers.location).toBe('/osd/app/home');
-  });
-
-  it('leaves absolute redirect Locations untouched', async () => {
-    const r = await get(makeApp(), '/osd/redir-abs');
-    expect(r.headers.location).toBe('https://elsewhere.example/x');
+    expect(r.headers.location).toBe('/app/home');
   });
 });

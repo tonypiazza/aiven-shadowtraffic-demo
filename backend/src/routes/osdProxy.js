@@ -5,7 +5,11 @@ import https from 'node:https';
  * Create an OpenSearch Dashboards reverse proxy that:
  * 1. Injects HTTP Basic authentication
  * 2. Strips framing headers (x-frame-options, frame-ancestors from CSP)
- * 3. Rewrites root-relative redirects to stay under /osd
+ *
+ * OSD is served at the ORIGIN ROOT (this proxy is the app's catch-all), so its
+ * root-absolute assets (/bootstrap.js, /ui/*, /bundles/*, /api/*) resolve
+ * directly — no path prefixing or Location rewriting needed. The control app
+ * lives under reserved prefixes (/_demo, /control, and GET /).
  */
 export function createOsdProxy({ target, username, password }) {
   const targetUrl = new URL(target);
@@ -41,18 +45,7 @@ export function createOsdProxy({ target, username, password }) {
           .trim();
       }
 
-      // Rewrite root-relative redirects, avoiding double-prefixing paths OSD
-      // already emits under /osd.
-      if (
-        resHeaders.location &&
-        resHeaders.location.startsWith('/') &&
-        !resHeaders.location.startsWith('/osd/') &&
-        resHeaders.location !== '/osd'
-      ) {
-        resHeaders.location = '/osd' + resHeaders.location;
-      }
-
-      // Set response headers
+      // Set response headers (no Location rewriting — OSD owns the root path space)
       res.writeHead(proxyRes.statusCode, resHeaders);
 
       // Pipe response body

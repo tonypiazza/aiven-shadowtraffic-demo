@@ -45,34 +45,36 @@ export function createApp({ env = process.env, configPath = '/data/config.json',
   const configManager = new ConfigManager({ domain, kafkaConnection, configPath, debounceMs: 500 });
 
   const app = express();
-  app.use(express.json());
-  app.use('/api/control', createControlRouter(configManager));
-  app.use('/api', createStatusRouter({
+
+  const here = dirname(fileURLToPath(import.meta.url));
+  const spaDir = join(here, '..', 'public');
+
+  // ── Our control app lives under reserved prefixes so OSD can own the origin
+  //    root (OSD's assets are root-absolute: /bootstrap.js, /ui/*, /bundles/*,
+  //    /api/*). Anything not matched here falls through to the OSD proxy. ──
+
+  // Control REST API under /control (NOT /api — OSD uses /api at the root).
+  app.use('/control', express.json());
+  app.use('/control', createControlRouter(configManager));
+  app.use('/control', createStatusRouter({
     configManager,
     startedAt,
     ttlMs: TTL_MS,
     osdDashboardId: env.OSD_DASHBOARD_ID || null,
   }));
 
-  // Reverse-proxy OpenSearch Dashboards under /osd so the SPA can iframe it
-  // same-origin. If OSD isn't configured, the route replies 503 (rather than 404).
+  // Control SPA shell at GET / and its built assets under /_demo/ (Vite base).
+  // Vite builds everything (index.html + assets) into public/_demo/.
+  app.get('/', (req, res) => res.sendFile(join(spaDir, '_demo', 'index.html')));
+  app.use('/_demo', express.static(join(spaDir, '_demo')));
+
+  // Everything else → OpenSearch Dashboards at the origin root.
   const osd = resolveOsdTarget(env);
   if (osd) {
-    app.use('/osd', createOsdProxy(osd));
+    app.use(createOsdProxy(osd));
   } else {
-    app.use('/osd', (req, res) => res.status(503).json({ error: 'OpenSearch Dashboards not configured' }));
+    app.use((req, res) => res.status(503).json({ error: 'OpenSearch Dashboards not configured' }));
   }
-
-  const here = dirname(fileURLToPath(import.meta.url));
-  const spaDir = join(here, '..', 'public');
-  app.use(express.static(spaDir));
-  // SPA fallback — but /api and /osd never fall through to index.html.
-  app.get('*', (req, res) => {
-    if (req.path.startsWith('/api') || req.path.startsWith('/osd')) {
-      return res.status(404).json({ error: 'Not found' });
-    }
-    res.sendFile(join(spaDir, 'index.html'));
-  });
 
   return { app, configManager };
 }

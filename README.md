@@ -10,8 +10,11 @@ action. Self-destructs after a hard-coded **60-minute TTL**.
 
 A single Docker image runs three processes under `supervisord`:
 - **Backend** (Node/Express) — serves the control SPA, rewrites the ShadowTraffic
-  config on each control action, and reverse-proxies OpenSearch Dashboards under
-  `/osd/*` (injects Basic auth, strips framing headers) so it embeds same-origin.
+  config on each control action, and reverse-proxies OpenSearch Dashboards at the
+  origin root (injects Basic auth, strips framing headers) so it embeds
+  same-origin. OSD owns the root path space (its assets are root-absolute); the
+  control app lives under reserved prefixes — shell at `GET /`, assets under
+  `/_demo/`, control API under `/control/*`.
 - **ShadowTraffic** (`java -jar /home/shadowtraffic.jar --config /data/config.json
   --watch --reload immediate`) — produces keyed GitHub events to Kafka.
 - **Watchdog** (Node) — deletes all Aiven services (app last) at the 60-min TTL.
@@ -41,7 +44,7 @@ rejects an empty config).
 
 ## Dashboard
 The dashboard **is** OpenSearch Dashboards (not custom charts), embedded via the
-`/osd` reverse proxy and auto-refreshing every 5s. Ship it as saved-objects — see
+root reverse proxy and auto-refreshing every 5s. Ship it as saved-objects — see
 `deploy/README-osd-dashboard.md`.
 
 ## Local development

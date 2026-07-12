@@ -13,36 +13,30 @@ describe('createApp', () => {
     OSD_DASHBOARD_ID: 'dash-xyz',
   };
 
-  it('boots and serves /api/status', async () => {
+  it('serves control state at /control/status', async () => {
     const { app } = createApp({ env, configPath: '/tmp/test-config.json' });
-    const res = await get(app, '/api/status');
+    const res = await get(app, '/control/status');
     expect(res.status).toBe(200);
     expect(res.body.state.running).toBe(false);
   });
 
-  it('exposes the OSD dashboard id via /api/config', async () => {
+  it('exposes the OSD dashboard id via /control/config', async () => {
     const { app } = createApp({ env, configPath: '/tmp/test-config.json' });
-    const res = await get(app, '/api/config');
+    const res = await get(app, '/control/config');
     expect(res.body.osdDashboardId).toBe('dash-xyz');
   });
 
-  it('returns JSON 404 for unknown /api routes (not the SPA html)', async () => {
+  it('proxies unknown root paths to OSD (OSD owns the root), not an SPA fallback', async () => {
+    // OSD's own paths (/api/*, /app/*, /bootstrap.js) go to the proxy. Target is
+    // unreachable in test → 502 (proxy mounted), never our JSON 404 or SPA html.
     const { app } = createApp({ env, configPath: '/tmp/test-config.json' });
-    const res = await get(app, '/api/does-not-exist');
-    expect(res.status).toBe(404);
-    expect(res.body.error).toBe('Not found');
+    const res = await get(app, '/api/status'); // OSD's own API path
+    expect(res.status).toBe(502);
   });
 
-  it('mounts /osd (proxy attempts upstream, not an SPA 404)', async () => {
-    // OSD target is unreachable in test → proxy returns 502 (mounted), not the SPA fallback.
-    const { app } = createApp({ env, configPath: '/tmp/test-config.json' });
-    const res = await get(app, '/osd/api/status');
-    expect([502, 200]).toContain(res.status); // 502 expected (host unresolvable); never SPA html
-  });
-
-  it('replies 503 on /osd when OpenSearch is not configured', async () => {
+  it('replies 503 for OSD paths when OpenSearch is not configured', async () => {
     const { app } = createApp({ env: { KAFKA_BOOTSTRAP_SERVER: 'h:1' }, configPath: '/tmp/test-config.json' });
-    const res = await get(app, '/osd/anything');
+    const res = await get(app, '/app/dashboards');
     expect(res.status).toBe(503);
   });
 });

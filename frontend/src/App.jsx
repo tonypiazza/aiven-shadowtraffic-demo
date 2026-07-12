@@ -9,14 +9,16 @@ export default function App() {
 
   useEffect(() => {
     api.getStatus().then((s) => setState(s.state)).catch(() => {});
+    // OSD is proxied at the origin ROOT (not under /osd), so its root-absolute
+    // assets resolve. The iframe points straight at /app/dashboards.
     api.getConfig().then((c) => {
       if (c.osdDashboardId) {
         const g = "(refreshInterval:(pause:!f,value:5000),time:(from:now-15m,to:now))";
-        setDashUrl(`/osd/app/dashboards#/view/${c.osdDashboardId}?embed=true&_g=${g}`);
+        setDashUrl(`/app/dashboards#/view/${c.osdDashboardId}?embed=true&_g=${g}`);
       } else {
-        setDashUrl('/osd/app/dashboards');
+        setDashUrl('/app/dashboards');
       }
-    }).catch(() => setDashUrl('/osd/app/dashboards'));
+    }).catch(() => setDashUrl('/app/dashboards'));
   }, []);
 
   const run = (running) => api.setRunning(running).then(setState);
