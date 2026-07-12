@@ -50,9 +50,14 @@ services:
       - KAFKA_SERVICE
 
   # Aiven-managed Kafka (auto-detected from the image name).
+  # NOTE: Aiven's compose manifest has NO plan field — the plan is chosen in the
+  # Console at deploy time and DEFAULTS to startup-4. Select business-4 for Kafka
+  # in the deploy flow (see scripts/provision-aiven.md); it can't be pinned here.
   kafka:
     image: apache/kafka:3.9
 
   # Aiven-managed PostgreSQL (auto-detected from the image name).
+  # NOTE: same as Kafka — no plan field in compose; select business-4 in the Console
+  # deploy flow (default is startup-4).
   postgres:
     image: postgres:16

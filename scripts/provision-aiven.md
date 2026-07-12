@@ -81,10 +81,15 @@ watchdog restart), and every failed termination is logged loudly (no silent givi
    branch → **Scan**. Aiven reads `compose.yaml`: one app service `demo-app` (built
    from `Dockerfile`, port 8080) + **Kafka** + **PostgreSQL**, all in
    **aws-eu-west-1**.
-3. Fill env vars from the table (secrets as secret). `SCHEMA_REGISTRY_*` come from
+3. **⚠️ Set the plans in the Console.** `compose.yaml` **cannot** pin a service plan —
+   Aiven's manifest format has no plan field, so unset services default to
+   **`startup-4`**. In the deploy flow, explicitly select **`business-4`** for both
+   **Kafka** and **PostgreSQL** (see the Services table above). Leaving the default
+   silently under-provisions them.
+4. Fill env vars from the table (secrets as secret). `SCHEMA_REGISTRY_*` come from
    the schema-registry step below — you can deploy first and add them after enabling
    the registry, or set them once known and redeploy. `AIVEN_SERVICES` app-last.
-4. Deploy. Kafka + Postgres + the app come up together.
+5. Deploy. Kafka + Postgres + the app come up together.
 
 ## Wire the pipeline (terminal notebook, no agent)
 
