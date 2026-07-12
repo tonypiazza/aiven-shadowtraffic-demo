@@ -11,11 +11,17 @@ import { createOsdProxy } from './routes/osdProxy.js';
 const TTL_MS = 60 * 60 * 1000; // hard-coded 60 minutes
 
 /**
- * Resolve the OpenSearch Dashboards base URL + Basic-auth creds for the proxy.
- * Aiven injects OPENSEARCH_URL as a full URI (https://user:pass@host:port). If a
- * dedicated dashboards URL/creds are provided, prefer them.
+ * Resolve the OpenSearch Dashboards base URL + Basic-auth creds for the /osd proxy.
+ *
+ * On Aiven, OpenSearch Dashboards shares the DB's host but listens on port 443,
+ * separate from the DB API port (~13xxx). The Kafka/OpenSearch integration
+ * auto-injects OPENSEARCH_URL (https://user:pass@host:dbport) — so by default we
+ * reuse its host + credentials but force port 443 to reach Dashboards, requiring
+ * no extra secrets. An explicit OPENSEARCH_DASHBOARDS_URL overrides this if the
+ * endpoint ever differs. Credentials can also be overridden via OPENSEARCH_USER/
+ * OPENSEARCH_PASSWORD.
  */
-function resolveOsdTarget(env) {
+export function resolveOsdTarget(env) {
   const explicit = env.OPENSEARCH_DASHBOARDS_URL;
   const raw = explicit || env.OPENSEARCH_URL;
   if (!raw) return null;
@@ -23,8 +29,10 @@ function resolveOsdTarget(env) {
     const u = new URL(raw);
     const username = env.OPENSEARCH_USER || decodeURIComponent(u.username) || 'avnadmin';
     const password = env.OPENSEARCH_PASSWORD || decodeURIComponent(u.password) || '';
-    // strip creds from the target origin
-    const target = `${u.protocol}//${u.host}`;
+    // Explicit dashboards URL: use its host:port as-is. Otherwise derive from the
+    // DB URL by targeting the Dashboards port (443).
+    const host = explicit ? u.host : u.hostname; // hostname drops the DB port
+    const target = `${u.protocol}//${host}`;      // no port → https default 443
     return { target, username, password };
   } catch {
     return null;
