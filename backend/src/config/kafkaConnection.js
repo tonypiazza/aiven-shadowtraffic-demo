@@ -1,6 +1,8 @@
 export function buildKafkaConnection(env) {
-  const bootstrap = env.KAFKA_BOOTSTRAP_SERVER;
-  if (!bootstrap) throw new Error('KAFKA_BOOTSTRAP_SERVER is required');
+  // Aiven's compose integration injects KAFKA_BOOTSTRAP_SERVERS (plural); accept
+  // both that and the singular form used in local/MCP setups.
+  const bootstrap = env.KAFKA_BOOTSTRAP_SERVERS || env.KAFKA_BOOTSTRAP_SERVER;
+  if (!bootstrap) throw new Error('KAFKA_BOOTSTRAP_SERVER(S) is required');
   const producerConfigs = {
     'bootstrap.servers': bootstrap,
     'security.protocol': 'SSL',

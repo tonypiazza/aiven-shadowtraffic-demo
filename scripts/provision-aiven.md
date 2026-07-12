@@ -21,18 +21,43 @@ All in **aws-eu-west-1** (only cloud offering Aiven Apps).
 - Aiven Apps access (Limited Availability) + a connected GitHub account (repo pushed).
 - For the Act-2 notebook: `uv` (runs `uv sync`), `avn` installed + **authenticated**
   (`avn user login`), `jq`, `psql`.
-- A ShadowTraffic license (six `LICENSE_*` values).
+- A ShadowTraffic license (six `LICENSE_*` values) — see next section.
 - An Aiven API token (watchdog teardown).
+
+## ShadowTraffic license — per-operator distribution
+
+**No `license.env` ships with this repo** — obtaining a license (shared or
+individual) is a required, deliberate step. Only `license.env.example` (placeholder
+values that won't work) is committed. The real `license.env` is **gitignored** — it
+is a secret, never committed, never baked into the (public, Console-built) image.
+Each operator injects it at deploy time as ONE Console secret, `LICENSE_ENV_B64`
+(the entrypoint decodes it back into the six `LICENSE_*` vars, correctly preserving
+values with spaces like the edition string).
+
+**Each operator, once per deploy:**
+1. Obtain a license and place it at the repo root as `license.env`:
+   - **Shared:** the team `license.env` from the secret store (1Password / vault /
+     internal runbook — distributed out-of-band, never through this repo); or
+   - **Individual:** sign up at https://shadowtraffic.io and download your own.
+   (`license.env.example` shows the exact shape.)
+2. `./scripts/encode-license.sh` → base64 blob is copied to your clipboard.
+3. Console → your app → Environment → add a **SECRET** var `LICENSE_ENV_B64`, paste.
+
+> ⚠️ **EXPIRATION — this is a *trial* license (`ShadowTraffic Free Trial`) that
+> expires `2026-08-10`.** After that date ShadowTraffic will refuse to start and the
+> demo produces no events. Replace the shared blob with a durable (non-trial) license
+> before then, or before wider rollout. (Durable licensing is pending confirmation
+> from ShadowTraffic; until then we share the trial blob out-of-band.)
 
 ## App configuration (env vars set in the Console deploy flow)
 
 | Variable | Secret? | Source |
 |----------|---------|--------|
-| `KAFKA_BOOTSTRAP_SERVER`, `KAFKA_CA_CERT`, `KAFKA_ACCESS_CERT`, `KAFKA_ACCESS_KEY` | yes | Auto-injected by the Kafka integration (PEM) |
-| `DATABASE_URL`, `PROJECT_CA_CERT` | yes | Auto-injected by the Postgres integration |
+| `KAFKA_BOOTSTRAP_SERVERS`, `KAFKA_CA_CERT`, `KAFKA_ACCESS_CERT`, `KAFKA_ACCESS_KEY` | auto | Auto-injected by the Kafka integration (note: **plural** SERVERS) |
+| `DATABASE_URL` (+ `PROJECT_CA_CERT` if offered) | auto | Auto-injected by the Postgres integration |
 | `SCHEMA_REGISTRY_URL` | no | Kafka `connection_info.schema_registry_uri` (strip creds) |
 | `SCHEMA_REGISTRY_USER`, `SCHEMA_REGISTRY_PASSWORD` | pw secret | Same URI's user:pass (ShadowTraffic produces Avro) |
-| `LICENSE_*` (six) | yes | ShadowTraffic license |
+| `LICENSE_ENV_B64` | yes | **Simplest:** `base64 -i license.env` — one secret; entrypoint decodes it. (Or set the six individual `LICENSE_*`.) |
 | `AIVEN_TOKEN` | yes | Aiven API token |
 | `AIVEN_PROJECT` | no | Aiven project name |
 | `AIVEN_SERVICES` | no | `"<kafka>,<kafka-connect>,<postgres>,<app>"` — **app LAST** |

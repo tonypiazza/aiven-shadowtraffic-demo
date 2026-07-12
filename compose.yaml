@@ -29,7 +29,10 @@ services:
       - SCHEMA_REGISTRY_URL
       - SCHEMA_REGISTRY_USER
       - SCHEMA_REGISTRY_PASSWORD
-      # ShadowTraffic license (all secret; set at deploy)
+      # ShadowTraffic license. Simplest: set ONE secret LICENSE_ENV_B64 =
+      # base64 of the whole license.env (the entrypoint decodes + exports it).
+      # Or set the six individual LICENSE_* vars instead.
+      - LICENSE_ENV_B64
       - LICENSE_ID
       - LICENSE_EMAIL
       - LICENSE_ORGANIZATION

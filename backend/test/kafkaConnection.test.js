@@ -26,6 +26,11 @@ describe('buildKafkaConnection', () => {
     expect(() => buildKafkaConnection({})).toThrow(/KAFKA_BOOTSTRAP_SERVER/);
   });
 
+  it('accepts the plural KAFKA_BOOTSTRAP_SERVERS injected by Aiven compose', () => {
+    const conn = buildKafkaConnection({ KAFKA_BOOTSTRAP_SERVERS: 'plural-host:9999' });
+    expect(conn.producerConfigs['bootstrap.servers']).toBe('plural-host:9999');
+  });
+
   it('adds Avro value serializer + schema registry when registry env present', () => {
     const conn = buildKafkaConnection({
       KAFKA_BOOTSTRAP_SERVER: 'h:1',
