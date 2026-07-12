@@ -1,0 +1,16 @@
+# Claude Code / superpowers artifacts
+.claude/
+.superpowers/
+docs/
+CLAUDE.md
+CLAUDE.local.md
+.mcp.json
+
+node_modules/
+*.env
+license.env
+.DS_Store
+backend/public/
+dist/
+.tmp-throughput/
+.tmp-spike/

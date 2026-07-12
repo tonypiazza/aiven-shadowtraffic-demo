@@ -1,0 +1,59 @@
+# Aiven Apps manifest for the ShadowTraffic × Aiven demo.
+#
+# Declares ONE application service (built from docker/Dockerfile) plus two
+# Aiven-managed data services: Kafka and OpenSearch. Listing them under
+# depends_on triggers Aiven to provision/attach them and inject connection env
+# vars automatically:
+#   Kafka:      KAFKA_BOOTSTRAP_SERVER, KAFKA_CA_CERT, KAFKA_ACCESS_CERT, KAFKA_ACCESS_KEY
+#               (the container entrypoint converts those PEM values into a keystore/truststore)
+#   OpenSearch: OPENSEARCH_URL (https://user:pass@host:port)
+#
+# NOT expressible in this compose manifest (separate provisioning steps — see
+# scripts/provision-aiven.md): a dedicated Kafka Connect service, the OpenSearch
+# sink connector, and importing the OpenSearch Dashboards saved-objects.
+#
+# Secrets (LICENSE_*, AIVEN_TOKEN, OpenSearch password) should be set as SECRET
+# environment variables in the Console deploy flow or via aiven_application_deploy
+# — do NOT hard-code them here.
+services:
+  demo-app:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+    ports:
+      - "8080:8080"
+    depends_on:
+      - kafka
+      - opensearch
+    environment:
+      # OpenSearch connection (URL auto-injected by the integration). Password secret.
+      - OPENSEARCH_URL
+      - OPENSEARCH_USER
+      - OPENSEARCH_PASSWORD
+      # OpenSearch DASHBOARDS endpoint — a SEPARATE URI (port 443) from the DB URL.
+      # The /osd reverse proxy targets THIS. Set from the OpenSearch service's
+      # connection_info.opensearch_dashboards_uri. Secret (contains creds).
+      - OPENSEARCH_DASHBOARDS_URL
+      # OpenSearch Dashboards dashboard id the SPA embeds (from saved-objects import).
+      - OSD_DASHBOARD_ID
+      # ShadowTraffic license (all secret; set at deploy)
+      - LICENSE_ID
+      - LICENSE_EMAIL
+      - LICENSE_ORGANIZATION
+      - LICENSE_EDITION
+      - LICENSE_EXPIRATION
+      - LICENSE_SIGNATURE
+      # Watchdog teardown (AIVEN_TOKEN is secret). List the app service LAST in
+      # AIVEN_SERVICES so it deletes the data services before deleting itself, e.g.
+      # "<kafka>,<kafka-connect>,<opensearch>,<app>".
+      - AIVEN_TOKEN
+      - AIVEN_PROJECT
+      - AIVEN_SERVICES
+
+  # Aiven-managed Kafka (auto-detected from the image name).
+  kafka:
+    image: apache/kafka:3.9
+
+  # Aiven-managed OpenSearch (auto-detected from the image name).
+  opensearch:
+    image: opensearchproject/opensearch:2

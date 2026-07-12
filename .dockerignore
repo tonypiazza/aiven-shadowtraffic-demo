@@ -1,0 +1,8 @@
+**/node_modules
+backend/public
+.superpowers
+docs
+*.env
+license.env
+.git
+.DS_Store
