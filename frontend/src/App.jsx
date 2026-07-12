@@ -10,15 +10,15 @@ export default function App() {
   useEffect(() => {
     api.getStatus().then((s) => setState(s.state)).catch(() => {});
     // OSD is proxied at the origin ROOT (not under /osd), so its root-absolute
-    // assets resolve. The iframe points straight at /app/dashboards.
-    api.getConfig().then((c) => {
-      if (c.osdDashboardId) {
-        const g = "(refreshInterval:(pause:!f,value:5000),time:(from:now-15m,to:now))";
-        setDashUrl(`/app/dashboards#/view/${c.osdDashboardId}?embed=true&_g=${g}`);
-      } else {
-        setDashUrl('/app/dashboards');
-      }
-    }).catch(() => setDashUrl('/app/dashboards'));
+    // assets resolve. The iframe deep-links to the demo dashboard (a fixed
+    // saved-object id shipped in deploy/osd-dashboard-objects.ndjson); an
+    // OSD_DASHBOARD_ID env var overrides it if ever needed.
+    const DEFAULT_DASHBOARD_ID = 'github-events-dashboard';
+    const g = "(refreshInterval:(pause:!f,value:5000),time:(from:now-15m,to:now))";
+    api.getConfig()
+      .then((c) => c.osdDashboardId || DEFAULT_DASHBOARD_ID)
+      .catch(() => DEFAULT_DASHBOARD_ID)
+      .then((id) => setDashUrl(`/app/dashboards#/view/${id}?embed=true&_g=${g}`));
   }, []);
 
   const run = (running) => api.setRunning(running).then(setState);
