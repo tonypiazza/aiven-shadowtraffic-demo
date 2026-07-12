@@ -1,1 +1,0 @@
-{"type":"index-pattern","id":"github-events","attributes":{"title":"github-events*","timeFieldName":"created_at"},"references":[],"migrationVersion":{"index-pattern":"7.6.0"}}

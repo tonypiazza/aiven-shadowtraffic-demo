@@ -2,29 +2,28 @@
 
 A single-window sales demo: a control sidebar drives **ShadowTraffic** generating
 GitHub-activity events (shaped like [GH Archive](https://www.gharchive.org/)) →
-**Aiven Kafka** → dedicated **Kafka Connect** → **Aiven OpenSearch**, with the real
-**OpenSearch Dashboards** embedded in the same page reacting live to every control
-action. Self-destructs after a hard-coded **60-minute TTL**.
+**Aiven Kafka** (as Avro) → dedicated **Kafka Connect** (JDBC sink) →
+**Aiven PostgreSQL**, with a **custom real-time dashboard** in the same page
+updating live (SSE) as you tune the stream. Self-destructs after a hard-coded
+**60-minute TTL**.
 
 ## Architecture
 
 A single Docker image runs three processes under `supervisord`:
-- **Backend** (Node/Express) — serves the control SPA, rewrites the ShadowTraffic
-  config on each control action, and reverse-proxies OpenSearch Dashboards at the
-  origin root (injects Basic auth, strips framing headers) so it embeds
-  same-origin. OSD owns the root path space (its assets are root-absolute); the
-  control app lives under reserved prefixes — shell at `GET /`, assets under
-  `/_demo/`, control API under `/control/*`.
+- **Backend** (Node/Express) — serves the control SPA + dashboard, rewrites the
+  ShadowTraffic config on each control action, and **polls Postgres → streams
+  metrics over SSE** to the React/Recharts charts (we render the dashboard, so
+  updates are smooth — no flicker).
 - **ShadowTraffic** (`java -jar /home/shadowtraffic.jar --config /data/config.json
-  --watch --reload immediate`) — produces keyed GitHub events to Kafka.
+  --watch --reload immediate`) — produces keyed **Avro** GitHub events to Kafka.
 - **Watchdog** (Node) — deletes all Aiven services (app last) at the 60-min TTL.
 
 ```
-Browser ──HTTP control + /osd iframe──▶ Backend ──rewrites──▶ /data/config.json
-   ▲                                        │                        │ watched
-   └──────── embedded OSD (proxied) ◀───────┘                        ▼
-Aiven OpenSearch ◀── sink connector ── Aiven Kafka Connect ◀── Aiven Kafka ◀── ShadowTraffic
-        └──────────── OpenSearch Dashboards (proxied into the app) ───────────┘
+Browser ──HTTP control──▶ Backend ──rewrites──▶ /data/config.json
+   ▲                         │  ▲                       │ watched
+   └──── SSE live metrics ───┘  └── polls (SQL) ── Postgres        ▼
+                                                     ▲       ShadowTraffic
+   Aiven PostgreSQL ◀── JDBC sink ── Aiven Kafka Connect ◀── Aiven Kafka ◀──┘
 ```
 
 Why one image: ShadowTraffic's only control surface is its watched config file, and
@@ -43,12 +42,14 @@ Each event is keyed by `repo_id` so load spreads across Kafka partitions.
 rejects an empty config).
 
 ## Dashboard
-The dashboard **is** OpenSearch Dashboards (not custom charts), embedded via the
-root reverse proxy and auto-refreshing every 5s. Ship it as saved-objects — see
-`deploy/README-osd-dashboard.md`.
+A **custom React + Recharts** dashboard rendered by our app: a hero events/sec
+time-series by type, KPI tiles (events/sec, total, active repos), and breakdowns
+(top repos, event-type mix). The backend polls Postgres (`created_at` is BIGINT
+epoch-millis; bucketed via `to_timestamp(created_at/1000)`) and pushes updates over
+SSE, so the charts update live and smoothly.
 
 ## Local development
-- Backend: `cd backend && npm install && npm test`  (45 tests)
+- Backend: `cd backend && npm install && npm test`  (48 tests)
 - Frontend: `cd frontend && npm install && npm run build`
 - Container (**podman** locally): `podman build -f Dockerfile -t shadowtraffic-demo:local .`
 - Validate a ShadowTraffic config without Kafka:
@@ -57,16 +58,22 @@ root reverse proxy and auto-refreshing every 5s. Ship it as saved-objects — se
 A ShadowTraffic license is required. Put `LICENSE_*` values in a git-ignored
 `license.env` for local runs, or inject them as Aiven secrets when deploying.
 
-## Deploy to Aiven
-Two tracks (Console, MCP) in [`scripts/provision-aiven.md`](scripts/provision-aiven.md).
-`compose.yaml` auto-wires Kafka + OpenSearch; the dedicated Kafka Connect service,
-the OpenSearch sink connector, and the OSD saved-objects import are separate
-provisioning steps documented in the runbook. The repo must be pushed to GitHub
-first (Aiven Apps builds from a connected Git repo).
+## Deploy to Aiven (platform-native, no agent)
+See [`scripts/provision-aiven.md`](scripts/provision-aiven.md). Two acts:
+1. **Console → Deploy app → Scan `compose.yaml`** auto-provisions the app + Kafka +
+   PostgreSQL together (in `aws-eu-west-1`).
+2. **Wire the pipeline** (schema registry, dedicated Kafka Connect, topic, JDBC
+   sink) via the terminal notebook: `uv sync` then `./demo-notebook.sh` (euporie
+   TUI) or `./jupyter.sh` (JupyterLab GUI) — or the equivalent Console clicks.
+
+The repo must be pushed to GitHub first (Aiven Apps builds from a connected Git
+repo). There is no `avn` CLI app-deploy; the app deploys via the Console compose
+scan. `uv sync` provisions the notebook tooling (euporie + bash kernel); the
+notebook also needs `avn` (authenticated), `jq`, and `psql`.
 
 ## TTL / cost safety
 Self-destructs after **60 minutes**: the watchdog deletes the Kafka, Kafka Connect,
-OpenSearch, and App services via the Aiven API (**app last**, since it runs inside
+PostgreSQL, and App services via the Aiven API (**app last**, since it runs inside
 the app container). A countdown shows in the upper-right of the UI.
 
 **Limitation:** the watchdog runs inside the app container. If the App is deleted or

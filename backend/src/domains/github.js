@@ -136,12 +136,48 @@ function renderKey() {
   return { repo_id: { _gen: 'uniformDistribution', bounds: [1, 500000], decimals: 0 } };
 }
 
+// Postgres table the JDBC sink writes to (topic github-events → table github_events
+// via the connector's table.name.format). created_at is BIGINT epoch-millis (from
+// ShadowTraffic's `now` Avro long); bucket in SQL with to_timestamp(created_at/1000.0).
+const table = 'github_events';
+const nowMs = 'extract(epoch from now())*1000';
+
+const metricQueries = {
+  eventsPerSec: `SELECT count(*)/5.0 AS v FROM ${table} WHERE created_at > (${nowMs} - 5000)`,
+  totalEvents: `SELECT count(*) AS v FROM ${table}`,
+  activeRepos: `SELECT count(DISTINCT repo_id) AS v FROM ${table} WHERE created_at > (${nowMs} - 60000)`,
+  byType: `SELECT type AS label, count(*) AS value FROM ${table} WHERE created_at > (${nowMs} - 60000) GROUP BY type ORDER BY value DESC`,
+  topRepos: `SELECT repo_full_name AS label, count(*) AS value FROM ${table} WHERE created_at > (${nowMs} - 60000) GROUP BY repo_full_name ORDER BY value DESC LIMIT 8`,
+  series: `SELECT floor(created_at/1000)::bigint AS t, type, count(*) AS value
+           FROM ${table} WHERE created_at > (${nowMs} - 120000)
+           GROUP BY t, type ORDER BY t`,
+};
+
+function shapeMetrics(raw) {
+  const num = (rows) => (rows && rows[0] ? Number(Object.values(rows[0])[0]) : 0);
+  const list = (rows) => (rows || []).map((r) => ({ label: r.label, value: Number(r.value) }));
+  return {
+    kpis: {
+      eventsPerSec: Math.round(num(raw.eventsPerSec)),
+      totalEvents: num(raw.totalEvents),
+      activeRepos: num(raw.activeRepos),
+    },
+    byType: list(raw.byType),
+    topRepos: list(raw.topRepos),
+    series: (raw.series || []).map((r) => ({ t: Number(r.t), type: r.type, value: Number(r.value) })),
+    ts: Date.now(),
+  };
+}
+
 export default {
   topic: 'github-events',
   keyField: 'repo_id',
+  table,
   types,
   defaultRates,
   scenarios,
   renderValue,
-  renderKey
+  renderKey,
+  metricQueries,
+  shapeMetrics,
 };

@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import express from 'express';
+import { EventEmitter } from 'node:events';
 import { createStatusRouter } from '../src/routes/status.js';
 import { ConfigManager } from '../src/config/configManager.js';
 import github from '../src/domains/github.js';
@@ -8,14 +9,14 @@ async function get(app, path) {
   const { default: request } = await import('supertest');
   return request(app).get(path);
 }
-
 function makeApp(overrides = {}) {
   const cm = new ConfigManager({ domain: github, kafkaConnection: { kind: 'kafka', producerConfigs: {} } });
+  const poller = new EventEmitter();
   const startedAt = overrides.startedAt ?? Date.now();
-  const ttlMs = overrides.ttlMs ?? 60 * 60 * 1000;
+  const ttlMs = overrides.ttlMs ?? 3600000;
   const app = express();
-  app.use('/api', createStatusRouter({ configManager: cm, startedAt, ttlMs, osdDashboardId: 'dash-123' }));
-  return { app };
+  app.use('/api', createStatusRouter({ configManager: cm, poller, startedAt, ttlMs }));
+  return { app, poller };
 }
 
 describe('status routes', () => {
@@ -39,12 +40,5 @@ describe('status routes', () => {
     const { app } = makeApp({ startedAt: Date.now() - 120000, ttlMs: 60000 });
     const res = await get(app, '/api/ttl');
     expect(res.body.remainingMs).toBe(0);
-  });
-
-  it('GET /api/config returns the osd dashboard id', async () => {
-    const { app } = makeApp();
-    const res = await get(app, '/api/config');
-    expect(res.status).toBe(200);
-    expect(res.body.osdDashboardId).toBe('dash-123');
   });
 });

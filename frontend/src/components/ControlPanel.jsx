@@ -12,13 +12,13 @@ const SCENARIOS = [
   { id: 'release-rush', label: '🔥 Release rush' },
 ];
 
-export default function ControlPanel({ state, onRun, onPause, onRate, onMultiplier, onScenario, onRefresh }) {
+export default function ControlPanel({ state, onRun, onPause, onRate, onMultiplier, onScenario }) {
   const rates = state.rates || {};
   return (
     <div style={{ width: '32%', minWidth: 300, padding: 20, borderRight: '1px solid #e3e3e3',
                   background: '#fafafa', overflowY: 'auto' }}>
       <h2 style={{ marginTop: 0 }}>ShadowTraffic Controls</h2>
-      <div style={{ fontSize: 12, textTransform: 'uppercase', color: '#888', marginBottom: 6 }}>GitHub events → Kafka → OpenSearch</div>
+      <div style={{ fontSize: 12, textTransform: 'uppercase', color: '#888', marginBottom: 6 }}>GitHub events → Kafka → Postgres</div>
 
       <div style={{ display: 'flex', gap: 8, margin: '14px 0' }}>
         <button onClick={() => onRun(true)} disabled={state.running}
@@ -55,16 +55,6 @@ export default function ControlPanel({ state, onRun, onPause, onRate, onMultipli
             {s.label}
           </button>
         ))}
-      </div>
-
-      <div style={{ fontSize: 12, textTransform: 'uppercase', color: '#888', margin: '18px 0 6px' }}>Dashboard</div>
-      <button onClick={onRefresh}
-              style={{ width: '100%', padding: '10px', borderRadius: 8, border: '1px solid #3a7afe',
-                       background: '#3a7afe', color: '#fff', fontWeight: 600 }}>
-        🔄 Refresh dashboard
-      </button>
-      <div style={{ fontSize: 11, color: '#999', marginTop: 6 }}>
-        Re-queries OpenSearch and repaints the panels (auto-refresh is off to keep the view steady).
       </div>
     </div>
   );

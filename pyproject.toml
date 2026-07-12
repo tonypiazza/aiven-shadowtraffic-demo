@@ -7,4 +7,5 @@ requires-python = ">=3.13"
 dependencies = [
     "bash-kernel>=0.10.0",
     "euporie>=2.10.4",
+    "jupyterlab>=4.6.1",
 ]

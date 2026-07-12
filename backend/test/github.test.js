@@ -39,4 +39,34 @@ describe('github domain pack', () => {
       for (const k of Object.keys(preset)) expect(github.types).toContain(k);
     }
   });
+
+  it('exposes table + metricQueries + shapeMetrics', () => {
+    expect(github.table).toBe('github_events');
+    for (const k of ['eventsPerSec', 'totalEvents', 'activeRepos', 'byType', 'topRepos', 'series'])
+      expect(typeof github.metricQueries[k]).toBe('string');
+  });
+
+  it('metric queries reference the table and bucket created_at as epoch-millis', () => {
+    expect(github.metricQueries.series).toContain('github_events');
+    expect(github.metricQueries.series).toContain('created_at/1000');
+  });
+
+  it('shapeMetrics maps raw rows to a dashboard DTO', () => {
+    const raw = {
+      eventsPerSec: [{ v: 512 }],
+      totalEvents: [{ v: 1200000 }],
+      activeRepos: [{ v: 8 }],
+      byType: [{ label: 'PushEvent', value: 400 }, { label: 'IssuesEvent', value: 50 }],
+      topRepos: [{ label: 'torvalds/linux', value: 900 }],
+      series: [{ t: 1783800000, type: 'PushEvent', value: 120 }],
+    };
+    const dto = github.shapeMetrics(raw);
+    expect(dto.kpis.eventsPerSec).toBe(512);
+    expect(dto.kpis.totalEvents).toBe(1200000);
+    expect(dto.kpis.activeRepos).toBe(8);
+    expect(dto.byType[0]).toEqual({ label: 'PushEvent', value: 400 });
+    expect(dto.topRepos[0].label).toBe('torvalds/linux');
+    expect(dto.series[0]).toEqual({ t: 1783800000, type: 'PushEvent', value: 120 });
+    expect(dto).toHaveProperty('ts');
+  });
 });

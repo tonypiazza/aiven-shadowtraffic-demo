@@ -1,6 +1,6 @@
 import { Router } from 'express';
 
-export function createStatusRouter({ configManager, startedAt, ttlMs, osdDashboardId }) {
+export function createStatusRouter({ configManager, poller, startedAt, ttlMs }) {
   const router = Router();
 
   router.get('/status', (req, res) => {
@@ -13,10 +13,14 @@ export function createStatusRouter({ configManager, startedAt, ttlMs, osdDashboa
     res.json({ remainingMs, ttlMs });
   });
 
-  // Front-end bootstrap config — notably the OpenSearch Dashboards dashboard id
-  // the SPA embeds via the /osd reverse proxy.
-  router.get('/config', (req, res) => {
-    res.json({ osdDashboardId: osdDashboardId || null });
+  // Server-Sent Events: push each poller 'metrics' DTO to the browser for a
+  // smooth, flicker-free live dashboard (we control the rendering).
+  router.get('/metrics', (req, res) => {
+    res.set({ 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache', Connection: 'keep-alive' });
+    res.flushHeaders?.();
+    const onMetrics = (dto) => res.write(`data: ${JSON.stringify(dto)}\n\n`);
+    poller.on('metrics', onMetrics);
+    req.on('close', () => poller.off('metrics', onMetrics));
   });
 
   return router;

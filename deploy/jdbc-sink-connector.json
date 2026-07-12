@@ -1,0 +1,20 @@
+{
+  "__comment": "Aiven JDBC sink: Kafka(Avro) -> PostgreSQL. Create on the DEDICATED Kafka Connect service. Fill connection.* from the Postgres service connection info and value.converter.schema.registry.* from the Kafka service's schema registry (Karapace). auto.create builds the github_events table from the Avro schema (table.name.format maps topic github-events -> table github_events).",
+  "name": "github-events-pg-sink",
+  "connector.class": "io.aiven.connect.jdbc.JdbcSinkConnector",
+  "topics": "github-events",
+  "table.name.format": "github_events",
+  "connection.url": "jdbc:postgresql://PG_HOST:PG_PORT/defaultdb?sslmode=require",
+  "connection.user": "avnadmin",
+  "connection.password": "PG_PASSWORD",
+  "tasks.max": "3",
+  "auto.create": "true",
+  "auto.evolve": "true",
+  "insert.mode": "insert",
+  "pk.mode": "none",
+  "key.converter": "org.apache.kafka.connect.storage.StringConverter",
+  "value.converter": "io.confluent.connect.avro.AvroConverter",
+  "value.converter.schema.registry.url": "SCHEMA_REGISTRY_URL",
+  "value.converter.basic.auth.credentials.source": "USER_INFO",
+  "value.converter.schema.registry.basic.auth.user.info": "SR_USER:SR_PASSWORD"
+}
