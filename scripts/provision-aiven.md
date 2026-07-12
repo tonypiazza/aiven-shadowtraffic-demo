@@ -54,11 +54,16 @@ List the **app last** so the data services are torn down before the app deletes 
    Kafka service: **Connectors → Integrate standalone service** → select the Connect
    service → Enable. (This is the dedicated-Connect integration.)
 3. **OpenSearch:** Create service → OpenSearch → business-4.
-4. **Sink connector:** On the Kafka (or Connect) service → **Connectors → Create
+4. **OpenSearch index mapping (BEFORE the sink):** apply the index template and
+   pre-create the `github-events` index so `created_at` maps as `date` (not `long`,
+   which breaks the dashboard's time features). See `deploy/README-osd-dashboard.md` §1
+   (`deploy/opensearch-index-template.json`).
+5. **Sink connector:** On the Kafka (or Connect) service → **Connectors → Create
    connector → OpenSearch sink**. Paste `deploy/opensearch-sink-connector.json` with
    `connection.*` filled from the OpenSearch connection info, `tasks.max=3`. Create.
-5. **OSD saved-objects:** import `deploy/osd-saved-objects.ndjson` and build/export the
-   dashboard per `deploy/README-osd-dashboard.md`; note the **dashboard id**.
+6. **OSD dashboard:** import `deploy/osd-dashboard-objects.ndjson` (index pattern +
+   3 visualizations + the `github-events-dashboard`) per `deploy/README-osd-dashboard.md` §2.
+   The app iframes dashboard id `github-events-dashboard` by default.
 6. **App:** Applications → **Deploy app** → connect GitHub → this repo + branch →
    **Scan**. Aiven detects `compose.yaml`: `demo-app` (built from `Dockerfile`,
    port 8080) + Kafka + OpenSearch. Attach to the **existing** Kafka/OpenSearch from

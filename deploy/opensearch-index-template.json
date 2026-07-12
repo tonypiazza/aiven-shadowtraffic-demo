@@ -1,0 +1,16 @@
+{
+  "index_patterns": ["github-events*"],
+  "template": {
+    "mappings": {
+      "properties": {
+        "created_at": { "type": "date", "format": "epoch_millis" },
+        "type": { "type": "keyword" },
+        "actor_login": { "type": "keyword" },
+        "repo_full_name": { "type": "keyword" },
+        "org_login": { "type": "keyword" },
+        "repo_id": { "type": "long" },
+        "actor_id": { "type": "long" }
+      }
+    }
+  }
+}
