@@ -18,7 +18,7 @@ A single Docker image runs three processes under `supervisord`:
 
 ```
 Browser ──HTTP control + /osd iframe──▶ Backend ──rewrites──▶ /data/config.json
-   ▲                                       │                        │ watched
+   ▲                                        │                        │ watched
    └──────── embedded OSD (proxied) ◀───────┘                        ▼
 Aiven OpenSearch ◀── sink connector ── Aiven Kafka Connect ◀── Aiven Kafka ◀── ShadowTraffic
         └──────────── OpenSearch Dashboards (proxied into the app) ───────────┘
