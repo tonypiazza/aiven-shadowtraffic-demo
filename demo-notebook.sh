@@ -17,4 +17,4 @@ mkdir -p .jupyter/kernels/bash
 cat > .jupyter/kernels/bash/kernel.json <<EOF
 {"argv": ["$(pwd)/.venv/bin/python", "-m", "bash_kernel", "-f", "{connection_file}"], "codemirror_mode": "shell", "display_name": "Bash", "language": "bash", "env": {"PS1": "\$"}}
 EOF
-exec uv run euporie notebook "${1:-deploy/wire-demo.ipynb}"
+exec uv run euporie notebook "${1:-wire-demo.ipynb}"

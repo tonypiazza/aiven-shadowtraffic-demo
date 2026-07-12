@@ -1,10 +1,10 @@
 # Aiven Provisioning Runbook (rev. 4 — Postgres + custom dashboard)
 
-**Deploys via the Aiven platform — no AI agent required.** Two acts:
-- **Act 1 — Console compose scan** provisions the app + Kafka + Postgres together.
-- **Act 2 — CLI wiring** (schema registry, dedicated Kafka Connect, topic, JDBC
+**Deploys via the Aiven platform — no AI agent required.** Two parts:
+- **Deploy the app — Console compose scan** provisions the app + Kafka + Postgres together.
+- **Wire the pipeline — CLI** (schema registry, dedicated Kafka Connect, topic, JDBC
   sink) via the terminal notebook `./demo-notebook.sh` (or the Console clickops
-  equivalents below). Compose can't express Act 2.
+  equivalents below). Compose can't express this part.
 
 ## Services (four; watchdog deletes all, app last)
 
@@ -19,7 +19,7 @@ All in **aws-eu-west-1** (only cloud offering Aiven Apps).
 
 ## Prerequisites
 - Aiven Apps access (Limited Availability) + a connected GitHub account (repo pushed).
-- For the Act-2 notebook: `uv` (runs `uv sync`), `avn` installed + **authenticated**
+- For the pipeline-wiring notebook: `uv` (runs `uv sync`), `avn` installed + **authenticated**
   (`avn user login`), `jq`, `psql`.
 - A ShadowTraffic license (six `LICENSE_*` values) — see next section.
 - An Aiven API token (watchdog teardown).
@@ -30,7 +30,7 @@ All in **aws-eu-west-1** (only cloud offering Aiven Apps).
 individual) is a required, deliberate step. Only `license.env.example` (placeholder
 values that won't work) is committed. The real `license.env` is **gitignored** — it
 is a secret, never committed, never baked into the (public, Console-built) image.
-Each operator injects it at deploy time as ONE Console secret, `LICENSE_ENV_B64`
+Each operator injects it at deploy time as ONE Console secret, `SHADOWTRAFFIC_LICENSE`
 (the entrypoint decodes it back into the six `LICENSE_*` vars, correctly preserving
 values with spaces like the edition string).
 
@@ -41,7 +41,7 @@ values with spaces like the edition string).
    - **Individual:** sign up at https://shadowtraffic.io and download your own.
    (`license.env.example` shows the exact shape.)
 2. `./scripts/encode-license.sh` → base64 blob is copied to your clipboard.
-3. Console → your app → Environment → add a **SECRET** var `LICENSE_ENV_B64`, paste.
+3. Console → your app → Environment → add a **SECRET** var `SHADOWTRAFFIC_LICENSE`, paste.
 
 > ⚠️ **EXPIRATION — this is a *trial* license (`ShadowTraffic Free Trial`) that
 > expires `2026-08-10`.** After that date ShadowTraffic will refuse to start and the
@@ -57,7 +57,7 @@ values with spaces like the edition string).
 | `DATABASE_URL` (+ `PROJECT_CA_CERT` if offered) | auto | Auto-injected by the Postgres integration |
 | `SCHEMA_REGISTRY_URL` | no | Kafka `connection_info.schema_registry_uri` (strip creds) |
 | `SCHEMA_REGISTRY_USER`, `SCHEMA_REGISTRY_PASSWORD` | pw secret | Same URI's user:pass (ShadowTraffic produces Avro) |
-| `LICENSE_ENV_B64` | yes | **Simplest:** `base64 -i license.env` — one secret; entrypoint decodes it. (Or set the six individual `LICENSE_*`.) |
+| `SHADOWTRAFFIC_LICENSE` | yes | **Simplest:** `base64 -i license.env` — one secret; entrypoint decodes it. (Or set the six individual `LICENSE_*`.) |
 | `AIVEN_TOKEN` | yes | Aiven API token |
 | `AIVEN_PROJECT` | no | Aiven project name |
 | `AIVEN_SERVICES` | no | `"<kafka>,<kafka-connect>,<postgres>,<app>"` — **app LAST** |
@@ -68,7 +68,7 @@ List the **app last** so the data services are torn down before the app deletes 
 
 ---
 
-## Act 1 — Deploy app + Kafka + Postgres (Aiven Console)
+## Deploy the app + Kafka + Postgres (Aiven Console)
 
 1. Push this repo to GitHub (public, or connect the private repo to Aiven).
 2. Console → **Applications → Deploy app** → connect GitHub → select this repo +
@@ -76,16 +76,16 @@ List the **app last** so the data services are torn down before the app deletes 
    from `Dockerfile`, port 8080) + **Kafka** + **PostgreSQL**, all in
    **aws-eu-west-1**.
 3. Fill env vars from the table (secrets as secret). `SCHEMA_REGISTRY_*` come from
-   Act 2 step 1 — you can deploy first and add them after enabling the registry, or
-   set them once known and redeploy. `AIVEN_SERVICES` app-last.
+   the schema-registry step below — you can deploy first and add them after enabling
+   the registry, or set them once known and redeploy. `AIVEN_SERVICES` app-last.
 4. Deploy. Kafka + Postgres + the app come up together.
 
-## Act 2 — Wire the pipeline (terminal notebook, no agent)
+## Wire the pipeline (terminal notebook, no agent)
 
 Run the notebook — it performs all of the following as live `avn` cells:
 ```bash
 uv sync            # installs euporie + bash kernel (one time)
-./demo-notebook.sh # opens deploy/wire-demo.ipynb in the terminal (euporie)
+./demo-notebook.sh # opens wire-demo.ipynb in the terminal (euporie)
 # GUI alternative: ./jupyter.sh (JupyterLab in the browser)
 ```
 The notebook: preflight → set names → enable schema registry → create + integrate
@@ -121,7 +121,7 @@ Postgres. Then apply the index: `deploy/postgres-schema.sql` (after the table ex
 
 ## Notes
 - **No `avn` app-deploy exists** — the app is deployed only via the Console compose
-  scan (Act 1). `avn` handles Act 2 (data-pipeline wiring). MCP
+  scan. `avn` handles the data-pipeline wiring. MCP
   `aiven_application_deploy` is an optional developer shortcut, not the demo path.
 - Container: Wolfi base; adds Node + supervisor + openssl via `apk`; `keytool` from
   GraalVM. Three supervised processes: backend (Node), shadowtraffic (`java -jar

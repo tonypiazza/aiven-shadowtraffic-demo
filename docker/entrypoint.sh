@@ -5,19 +5,19 @@ DATA_DIR=/data
 mkdir -p "$DATA_DIR"
 
 # Convenience: allow the whole ShadowTraffic license.env to be provided as ONE
-# base64 secret (LICENSE_ENV_B64) instead of six separate LICENSE_* vars — the
+# base64 secret (SHADOWTRAFFIC_LICENSE) instead of six separate LICENSE_* vars — the
 # Aiven Console only adds env vars one at a time. Decode + export it so
 # ShadowTraffic (a supervisord child) inherits the LICENSE_* values. Individual
 # LICENSE_* vars still work and take precedence if also set.
-if [[ -n "${LICENSE_ENV_B64:-}" ]]; then
-  echo "$LICENSE_ENV_B64" | base64 -d > "$DATA_DIR/license.env"
+if [[ -n "${SHADOWTRAFFIC_LICENSE:-}" ]]; then
+  echo "$SHADOWTRAFFIC_LICENSE" | base64 -d > "$DATA_DIR/license.env"
   # Parse KEY=VALUE line-by-line (do NOT `source` — license values contain spaces,
   # e.g. LICENSE_EDITION=ShadowTraffic Free Trial, which breaks shell sourcing).
   # IFS='=' + read -r splits only on the first '='; the rest (incl. spaces) is the value.
   while IFS='=' read -r k v; do
     [[ "$k" =~ ^LICENSE_[A-Z]+$ ]] && export "$k=$v"
   done < "$DATA_DIR/license.env"
-  echo "Loaded ShadowTraffic license from LICENSE_ENV_B64"
+  echo "Loaded ShadowTraffic license from SHADOWTRAFFIC_LICENSE"
 fi
 
 # Materialize Aiven PEM certs (injected as env vars) into keystore/truststore for
