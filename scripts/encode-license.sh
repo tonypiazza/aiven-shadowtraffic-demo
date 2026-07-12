@@ -24,24 +24,18 @@ if ! grep -q '^LICENSE_' "$LICENSE_FILE"; then
   exit 1
 fi
 
-# Warn if the license is already expired or expiring soon (trial licenses lapse).
-EXP="$(grep '^LICENSE_EXPIRATION=' "$LICENSE_FILE" | head -1 | cut -d= -f2- || true)"
-if [[ -n "$EXP" ]]; then
-  echo "License edition: $(grep '^LICENSE_EDITION=' "$LICENSE_FILE" | cut -d= -f2-)"
-  echo "License expires:  $EXP"
-fi
-
 B64="$(base64 -i "$LICENSE_FILE" 2>/dev/null || base64 < "$LICENSE_FILE")"
 
-# Copy to clipboard when a clipboard tool is available; always echo as fallback.
+# Copy to clipboard when a clipboard tool is available; fall back to printing.
+# Redirect the clipboard tool's stdio so it can't hold open an inherited output
+# pipe (e.g. the Jupyter bash kernel's), which would leave the cell hanging on [*].
 if command -v pbcopy >/dev/null 2>&1; then
-  printf '%s' "$B64" | pbcopy
-  echo "✓ base64 blob copied to clipboard — paste it as the LICENSE_ENV_B64 secret."
+  printf '%s' "$B64" | pbcopy >/dev/null 2>&1
+  echo "$(date '+%a %b %e %H:%M:%S') License copied to clipboard."
 elif command -v xclip >/dev/null 2>&1; then
-  printf '%s' "$B64" | xclip -selection clipboard
-  echo "✓ base64 blob copied to clipboard (xclip) — paste it as the LICENSE_ENV_B64 secret."
+  printf '%s' "$B64" | xclip -selection clipboard >/dev/null 2>&1
+  echo "$(date '+%a %b %e %H:%M:%S') License copied to clipboard."
 else
-  echo "No clipboard tool found. Copy the blob below into the LICENSE_ENV_B64 secret:"
-  echo
+  echo "No clipboard tool found. Copy the blob below into the LICENSE_ENV_B64 secret:" >&2
   printf '%s\n' "$B64"
 fi
