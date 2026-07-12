@@ -1,24 +1,25 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { api } from './api.js';
 import ControlPanel from './components/ControlPanel.jsx';
 import CountdownTimer from './components/CountdownTimer.jsx';
 
+const DEFAULT_DASHBOARD_ID = 'github-events-dashboard';
+// Embed mode with auto-refresh OFF (pause:!t) — the presenter refreshes on demand
+// via the sidebar button, which reloads the iframe (one clean re-query, no flicker).
+const buildDashUrl = (id) =>
+  `/app/dashboards#/view/${id}?embed=true&_g=(refreshInterval:(pause:!t,value:0),time:(from:now-2m,to:now))`;
+
 export default function App() {
   const [state, setState] = useState({ running: false, multiplier: 1, rates: {} });
-  const [dashUrl, setDashUrl] = useState(null);
+  const [dashboardId, setDashboardId] = useState(null);
+  const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
     api.getStatus().then((s) => setState(s.state)).catch(() => {});
-    // OSD is proxied at the origin ROOT (not under /osd), so its root-absolute
-    // assets resolve. The iframe deep-links to the demo dashboard (a fixed
-    // saved-object id shipped in deploy/osd-dashboard-objects.ndjson); an
-    // OSD_DASHBOARD_ID env var overrides it if ever needed.
-    const DEFAULT_DASHBOARD_ID = 'github-events-dashboard';
-    const g = "(refreshInterval:(pause:!t,value:30000),time:(from:now-15m,to:now))";
     api.getConfig()
       .then((c) => c.osdDashboardId || DEFAULT_DASHBOARD_ID)
       .catch(() => DEFAULT_DASHBOARD_ID)
-      .then((id) => setDashUrl(`/app/dashboards#/view/${id}?embed=true&_g=${g}`));
+      .then(setDashboardId);
   }, []);
 
   const run = (running) => api.setRunning(running).then(setState);
@@ -26,15 +27,18 @@ export default function App() {
   const rate = (type, r) => { setState((s) => ({ ...s, rates: { ...s.rates, [type]: r } })); api.setRate(type, r).then(setState); };
   const multiplier = (m) => { setState((s) => ({ ...s, multiplier: m })); api.setMultiplier(m).then(setState); };
   const scenario = (id) => api.setScenario(id).then(setState).catch(() => {});
+  // Bumping the key remounts the iframe → OSD reloads and re-queries once.
+  const refreshDashboard = useCallback(() => setReloadKey((k) => k + 1), []);
 
   return (
     <div style={{ fontFamily: 'system-ui, sans-serif', height: '100vh', display: 'flex' }}>
       <CountdownTimer />
       <ControlPanel state={state}
-        onRun={run} onPause={pause} onRate={rate} onMultiplier={multiplier} onScenario={scenario} />
+        onRun={run} onPause={pause} onRate={rate} onMultiplier={multiplier}
+        onScenario={scenario} onRefresh={refreshDashboard} />
       <div style={{ flex: 1, position: 'relative' }}>
-        {dashUrl
-          ? <iframe title="OpenSearch Dashboards" src={dashUrl}
+        {dashboardId
+          ? <iframe key={reloadKey} title="OpenSearch Dashboards" src={buildDashUrl(dashboardId)}
                     style={{ width: '100%', height: '100%', border: 0 }} />
           : <div style={{ padding: 24, color: '#888' }}>Loading OpenSearch Dashboards…</div>}
       </div>
