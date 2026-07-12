@@ -1,3 +1,8 @@
+# Root-level Dockerfile for Aiven Apps (build context = repo root).
+# Identical to docker/Dockerfile; kept at the root because Aiven Apps' build_path
+# points at the directory containing the Dockerfile, while our build context must
+# be the repo root (it copies both frontend/ and backend/).
+
 # --- Stage 1: build the SPA ---
 FROM node:20-bookworm AS webbuild
 WORKDIR /src

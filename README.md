@@ -47,7 +47,7 @@ The dashboard **is** OpenSearch Dashboards (not custom charts), embedded via the
 ## Local development
 - Backend: `cd backend && npm install && npm test`  (45 tests)
 - Frontend: `cd frontend && npm install && npm run build`
-- Container (**podman** locally): `podman build -f docker/Dockerfile -t shadowtraffic-demo:local .`
+- Container (**podman** locally): `podman build -f Dockerfile -t shadowtraffic-demo:local .`
 - Validate a ShadowTraffic config without Kafka:
   `podman run --rm --env-file license.env -v "$PWD/somedir:/cfg" shadowtraffic/shadowtraffic:latest --config /cfg/config.json --stdout --sample 3`
 

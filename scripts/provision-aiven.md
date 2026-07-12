@@ -60,7 +60,7 @@ List the **app last** so the data services are torn down before the app deletes 
 5. **OSD saved-objects:** import `deploy/osd-saved-objects.ndjson` and build/export the
    dashboard per `deploy/README-osd-dashboard.md`; note the **dashboard id**.
 6. **App:** Applications → **Deploy app** → connect GitHub → this repo + branch →
-   **Scan**. Aiven detects `compose.yaml`: `demo-app` (built from `docker/Dockerfile`,
+   **Scan**. Aiven detects `compose.yaml`: `demo-app` (built from `Dockerfile`,
    port 8080) + Kafka + OpenSearch. Attach to the **existing** Kafka/OpenSearch from
    above. Fill env vars from the table (secrets as secret; `OSD_DASHBOARD_ID` from
    step 5; `AIVEN_SERVICES` app-last). Deploy.
@@ -77,7 +77,7 @@ Ask Claude (Aiven MCP connected), in order:
    with real connection.* + tasks.max=3), or the Console connector flow.
 5. Import OSD saved-objects + build/export dashboard (see `deploy/README-osd-dashboard.md`);
    capture the dashboard id.
-6. `aiven_application_deploy` (repo + branch, `build_path` → docker/Dockerfile, port
+6. `aiven_application_deploy` (repo + branch, `build_path` → Dockerfile, port
    8080, Kafka + OpenSearch `service_integrations`, env vars incl. `OSD_DASHBOARD_ID`,
    `AIVEN_*`, `LICENSE_*`, `AIVEN_SERVICES` app-last).
 
