@@ -41,10 +41,13 @@ services:
       - LICENSE_SIGNATURE
       # Watchdog teardown (AIVEN_TOKEN is secret). List the app service LAST in
       # AIVEN_SERVICES so it deletes the data services before deleting itself, e.g.
-      # "<kafka>,<kafka-connect>,<postgres>,<app>".
+      # "<kafka>,<postgres>,<app>". The dedicated Kafka Connect service is created
+      # later by the notebook, so it can't be listed here — instead set KAFKA_SERVICE
+      # and the watchdog discovers Connect via Kafka's integrations and deletes it too.
       - AIVEN_TOKEN
       - AIVEN_PROJECT
       - AIVEN_SERVICES
+      - KAFKA_SERVICE
 
   # Aiven-managed Kafka (auto-detected from the image name).
   kafka:

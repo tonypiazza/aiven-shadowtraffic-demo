@@ -58,13 +58,19 @@ values with spaces like the edition string).
 | `SCHEMA_REGISTRY_URL` | no | Kafka `connection_info.schema_registry_uri` (strip creds) |
 | `SCHEMA_REGISTRY_USER`, `SCHEMA_REGISTRY_PASSWORD` | pw secret | Same URI's user:pass (ShadowTraffic produces Avro) |
 | `SHADOWTRAFFIC_LICENSE` | yes | **Simplest:** `base64 -i license.env` — one secret; entrypoint decodes it. (Or set the six individual `LICENSE_*`.) |
-| `AIVEN_TOKEN` | yes | Aiven API token |
+| `AIVEN_TOKEN` | yes | Aiven API token (must have permission to terminate services) |
 | `AIVEN_PROJECT` | no | Aiven project name |
-| `AIVEN_SERVICES` | no | `"<kafka>,<kafka-connect>,<postgres>,<app>"` — **app LAST** |
+| `AIVEN_SERVICES` | no | `"<kafka>,<postgres>,<app>"` — **app LAST** (Connect is auto-discovered, see below) |
+| `KAFKA_SERVICE` | no | The Kafka service name (e.g. `kafka`). Lets the watchdog find + delete the notebook-created Kafka Connect service |
 
-### ⚠️ Watchdog deletion order
-The watchdog runs inside the app container and deletes `AIVEN_SERVICES` **in order**.
-List the **app last** so the data services are torn down before the app deletes itself.
+### ⚠️ Watchdog deletion order + Connect discovery
+The watchdog runs inside the app container and, at the 60-min TTL, deletes
+`AIVEN_SERVICES` **in order** — so list the **app last** (data services torn down
+before the app deletes itself). The dedicated **Kafka Connect** service is created
+*after* deploy by the notebook, so it can't be in `AIVEN_SERVICES`; instead the
+watchdog reads `KAFKA_SERVICE`'s integrations, finds the wired Connect service, and
+deletes it first. The TTL is anchored to the app's persisted start time (survives a
+watchdog restart), and every failed termination is logged loudly (no silent giving-up).
 
 ---
 
